@@ -1,4 +1,4 @@
-module github.com/vfiftyfive/kube-maze
+module github.com/vfiftyfive/kube-maze/pkg/maze
 
 go 1.21.6
 

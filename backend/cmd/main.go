@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	"github.com/vfiftyfive/kube-maze/pkg/maze"
+	"github.com/vfiftyfive/kube-maze/backend/pkg/maze"
 )
 
 // Maze represents the structure of our maze

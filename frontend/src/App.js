@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 import "./styles.scss";
 
 export default function App() {
-  const [gameId, setGameId] = useState(1);
-  const [status, setStatus] = useState("playing");
+  const [gameId] = useState(1);
+  const [status] = useState("playing");
   const [userPosition, setUserPosition] = useState({ x: 0, y: 0 });
   const [maze, setMaze] = useState(null);
   const cheatMode = process.env.REACT_APP_CHEAT_MODE === 'true' ? true : (false); // Default to false if env var is missing
@@ -13,7 +13,6 @@ export default function App() {
   useEffect(() => {
     const fetchMaze = async () => {
       try {
-        console.log('BACKEND_API_URL:', process.env.REACT_APP_BACKEND_API_URL);
         const response = await fetch(`${process.env.REACT_APP_BACKEND_API_URL}/maze?width=${mazeSize}&height=${mazeSize}`);
         const data = await response.json();
         setMaze(data);

@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	maze "github.com/vfiftyfive/kube-maze/pkg"
+	"github.com/vfiftyfive/kube-maze/backend/pkg/maze"
 )
 
 // MazeResponse represents the JSON structure for the maze response

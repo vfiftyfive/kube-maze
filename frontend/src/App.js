@@ -18,22 +18,23 @@ export default function App() {
         const data = await response.json();
         setMaze(data);
         
-        let startPosition = { x: 0, y: 0 };
-        for (let y = 0; y < data.height; y++) {
-          for (let x = 0; x < data.width; x++) {
-            if (data.cells[y][x].IsStart) {
-              startPosition = { x, y };
-              break;
-            }
-          }
-        }
+        let startPosition = { x: 0, y: 0 }, endPosition = { x: 0, y: 0 };
+        data.cells.forEach((row, y) => row.forEach((cell, x) => {
+          if (cell.IsStart) startPosition = { x, y };
+          if (cell.IsFinish) endPosition = { x, y };
+        }));
+
+        console.log("Start Position:", startPosition); // Log start position
+        console.log("End Position:", endPosition); // Log end position
+
         setUserPosition({ x: data.cells.findIndex(row => row.some(cell => cell.IsStart)), y: 0 });
-        if (cheatMode) {
-          const solution = solveMaze(data, /* startX, startY, endX, endY */);
-          const formattedSolutionPath = solution.map(point => `${point.y}-${point.x}`);
-          setSolutionPath(formattedSolutionPath);
-        }
         
+        if (cheatMode) {
+          const solution = solveMaze(data, startPosition.x, startPosition.y, endPosition.x, endPosition.y);
+          console.log("Solution Path:", solution); // Log the solution path
+          setSolutionPath(solution);
+        }
+
       } catch (error) {
         console.error("Failed to fetch maze:", error);
       }
@@ -41,6 +42,11 @@ export default function App() {
 
     fetchMaze();
   }, [mazeSize, cheatMode]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [maze, userPosition, gameStatus]);
 
   const handleKeyDown = (event) => {
     if (!maze || gameStatus !== "playing") return;
@@ -70,18 +76,28 @@ export default function App() {
       setGameStatus("won");
     }
   };
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [maze, userPosition, gameStatus]);
-
+  
   const makeClassName = (i, j) => {
     const cell = maze ? maze.cells[i][j] : null;
-    let className = cell ? `${cell.Walls.map((wall, index) => wall ? `${["topWall", "rightWall", "bottomWall", "leftWall"][index]}` : '').join(' ')} ${cell.IsStart ? 'start' : ''} ${cell.IsFinish ? 'finish destination' : ''} ${i === userPosition.y && j === userPosition.x ? 'currentPosition' : ''} ${cheatMode && solutionPath.includes(`${i}-${j}`) ? 'solutionPath' : ''}` : '';
+    let className = cell ? `${cell.Walls.map((wall, index) => wall ? `${["topWall", "rightWall", "bottomWall", "leftWall"][index]}` : '').join(' ')}` : '';
+  
+    // Apply solutionPath only if it's not the current position or destination
+    if (solutionPath.some(pos => pos.x === j && pos.y === i) && cheatMode && !(i === userPosition.y && j === userPosition.x)) {
+      className += ' solutionPath';
+    }
+  
+    if (cell?.IsStart) className += ' start';
+    if (cell?.IsFinish) {
+      className += ' finish destination'; // Ensures destination class is added last
+    }
+  
+    // Check if the current cell is the user's position
+    if (i === userPosition.y && j === userPosition.x) {
+      className += ' currentPosition';
+    }
+  
     return className.trim();
   };
-  
   
 
   return (

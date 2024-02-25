@@ -57,27 +57,29 @@ html, body, #root {
   }
 }
 
-.currentPosition {
-  div {
-    background: salmon;
-    height: 100%;
-    width: 100%;
-    border-radius: 50%;
-    display: block;
-  }
+/* Ensuring z-index is effectively applied by adding position: relative */
+.destination div, .currentPosition div, .solutionPath div {
+  position: relative;
 }
 
-.destination {
-  div {
-    background: SpringGreen url(../public/finish-flag.svg) no-repeat center center; /* Adjust the path as necessary */
-    background-size: contain; /* Resize the image to fit the container */
-    height: 100%;
-    width: 100%;
-    border-radius: 50%; /* Keeps the shape as a circle */
-    display: block;
-  }
+.destination div {
+  background: SpringGreen url('../public/finish-flag.svg') no-repeat center center;
+  background-size: contain;
+  height: 100%;
+  width: 100%;
+  border-radius: 50%;
+  display: block;
+  z-index: 3; /* Highest priority */
 }
 
+.currentPosition div {
+  background: salmon;
+  height: 100%;
+  width: 100%;
+  border-radius: 50%;
+  display: block;
+  z-index: 2; /* Higher than solutionPath, lower than destination */
+}
 
 .currentPosition.destination {
   div {
@@ -126,6 +128,7 @@ html, body, #root {
   width: 50%;
   border-radius: 50%;
   margin: 25% auto;
+  z-index: 1; /* Lower priority */
 }
 
 #maze {

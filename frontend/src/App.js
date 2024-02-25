@@ -1,82 +1,91 @@
-import { useState, useEffect } from "react";
-import { solve } from "./utils";
+import React, { useState, useEffect } from "react";
+import { solveMaze } from "./utils"; 
 import "./styles.scss";
 
 export default function App() {
-  const [gameId] = useState(1);
   const [userPosition, setUserPosition] = useState({ x: 0, y: 0 });
-  const [gameStatus, setGameStatus] = useState("playing"); 
   const [maze, setMaze] = useState(null);
-  const [solutionPath, setSolutionPath] = useState([]);
-  const cheatMode = process.env.REACT_APP_CHEAT_MODE === 'true';
+  const [gameStatus, setGameStatus] = useState("playing");
+  const cheatMode = process.env.REACT_APP_CHEAT_MODE === "true";
   const mazeSize = process.env.REACT_APP_MAZE_SIZE || 10;
+  const [solutionPath, setSolutionPath] = useState([]);
 
   useEffect(() => {
     const fetchMaze = async () => {
+      const url = `${process.env.REACT_APP_BACKEND_API_URL}/maze?width=${mazeSize}&height=${mazeSize}`; // Adjusted for a single size parameter
       try {
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_API_URL}/maze?width=${mazeSize}&height=${mazeSize}`);
+        const response = await fetch(url);
         const data = await response.json();
         setMaze(data);
-        setUserPosition({ x: data.cells.findIndex(row => row.some(cell => cell.IsStart)), y: 0 }); // Simplified start position logic
+        
+        let startPosition = { x: 0, y: 0 };
+        for (let y = 0; y < data.height; y++) {
+          for (let x = 0; x < data.width; x++) {
+            if (data.cells[y][x].IsStart) {
+              startPosition = { x, y };
+              break;
+            }
+          }
+        }
+        setUserPosition({ x: data.cells.findIndex(row => row.some(cell => cell.IsStart)), y: 0 });
+        if (cheatMode) {
+          const solution = solveMaze(data, /* startX, startY, endX, endY */);
+          const formattedSolutionPath = solution.map(point => `${point.y}-${point.x}`);
+          setSolutionPath(formattedSolutionPath);
+        }
+        
       } catch (error) {
         console.error("Failed to fetch maze:", error);
       }
     };
 
     fetchMaze();
-  }, [gameId, mazeSize]);
+  }, [mazeSize, cheatMode]);
 
-  useEffect(() => {
-    if (cheatMode && maze) {
-      // Assuming the start cell is always at 0, 0 for simplicity
-      const solution = solve(maze, 0, 0);
-      setSolutionPath(solution);
+  const handleKeyDown = (event) => {
+    if (!maze || gameStatus !== "playing") return;
+    let newX = userPosition.x;
+    let newY = userPosition.y;
+
+    switch (event.key) {
+      case "ArrowUp":
+        if (newY > 0 && !maze.cells[newY][newX].Walls[0]) newY--;
+        break;
+      case "ArrowDown":
+        if (newY < maze.height - 1 && !maze.cells[newY][newX].Walls[2]) newY++;
+        break;
+      case "ArrowLeft":
+        if (newX > 0 && !maze.cells[newY][newX].Walls[3]) newX--;
+        break;
+      case "ArrowRight":
+        if (newX < maze.width - 1 && !maze.cells[newY][newX].Walls[1]) newX++;
+        break;
+      default:
+        return;
     }
-  }, [maze, cheatMode]);
 
-  const handleMove = (e) => {
-    if (gameStatus !== "playing" || !maze) return;
-    e.preventDefault();
-    let { x, y } = userPosition;
-
-    switch (e.key) {
-        case "ArrowUp": if (y > 0 && !maze.cells[y][x].Walls[0]) y--; break;
-        case "ArrowDown": if (y < maze.height - 1 && !maze.cells[y][x].Walls[2]) y++; break;
-        case "ArrowLeft": if (x > 0 && !maze.cells[y][x].Walls[3]) x--; break;
-        case "ArrowRight": if (x < maze.width - 1 && !maze.cells[y][x].Walls[1]) x++; break;
-        default: return;
+    setUserPosition({ x: newX, y: newY });
+    // Check for win condition
+    if (maze.cells[newY][newX].IsFinish) {
+      setGameStatus("won");
     }
-
-    setUserPosition({ x, y });
-
-    // Check if the new position is the exit cell
-    if (x === maze.width - 1 && y === maze.height - 1) {
-        setGameStatus("won"); // Update gameStatus to "won"
-    }
-};
-
-  // Use solve function if needed for cheat mode or other features
-  // const solutionSet = cheatMode ? new Set(solve(maze, userPosition.x, userPosition.y).map(([x, y]) => `${x}-${y}`)) : new Set();
-
-  const makeClassName = (i, j) => {
-    let className = '';
-    const cell = maze.cells[i][j];
-    className += cell.Walls[0] ? ' topWall' : '';
-    className += cell.Walls[1] ? ' rightWall' : '';
-    className += cell.Walls[2] ? ' bottomWall' : '';
-    className += cell.Walls[3] ? ' leftWall' : '';
-    if (cell.IsStart) className += ' start';
-    if (cell.IsFinish) className += ' finish destination';
-    if (userPosition.x === j && userPosition.y === i) className += ' currentPosition';
-    if (cheatMode && solutionPath.some(pos => pos.x === j && pos.y === i)) {
-      className += ' solutionPath';
-    }
-    return className.trim();
   };
 
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [maze, userPosition, gameStatus]);
+
+  const makeClassName = (i, j) => {
+    const cell = maze ? maze.cells[i][j] : null;
+    let className = cell ? `${cell.Walls.map((wall, index) => wall ? `${["topWall", "rightWall", "bottomWall", "leftWall"][index]}` : '').join(' ')} ${cell.IsStart ? 'start' : ''} ${cell.IsFinish ? 'finish destination' : ''} ${i === userPosition.y && j === userPosition.x ? 'currentPosition' : ''} ${cheatMode && solutionPath.includes(`${i}-${j}`) ? 'solutionPath' : ''}` : '';
+    return className.trim();
+  };
+  
+  
+
   return (
-    <div className="App" onKeyDown={handleMove} tabIndex={0}>
-      {/* Instructions updated for arrow keys */}
+    <div className="App" tabIndex="0" onKeyDown={handleKeyDown}>
       <p>Use &#8592;, &#8593;, &#8594;, &#8595; to move. Cheat mode is {cheatMode ? "ON" : "OFF"}.</p>
       {maze && (
         <table id="maze">
@@ -94,19 +103,13 @@ export default function App() {
         </table>
       )}
       {gameStatus === "won" && (
-    <div className="congratsMessage">
-        <p>Congrats, you've solved the maze! 😊</p>
-        <button 
-            className="playAgainBtn"
-            onClick={() => {
-                setGameStatus("playing");
-                setUserPosition({ x: 0, y: 0 }); // Reset user position
-                // Optionally fetch a new maze here if desired
-            }}>
+        <div className="congratsMessage">
+          <p>Congrats, you've solved the maze! 😊</p>
+          <button className="playAgainBtn" onClick={() => window.location.reload()}>
             Play Again
-        </button>
-    </div>
-)}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

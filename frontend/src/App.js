@@ -1,96 +1,89 @@
-import React, { useState, useEffect } from 'react';
-import Cookies from 'js-cookie';
-import Maze from './components/Maze';
-import './App.css';
+import { useState, useEffect } from "react";
+// import { solve } from "./util"; // Assuming solve is still relevant
+import "./styles.scss";
 
-function App() {
+export default function App() {
+  const [gameId, setGameId] = useState(1);
+  const [status, setStatus] = useState("playing");
+  const [userPosition, setUserPosition] = useState({ x: 0, y: 0 });
   const [maze, setMaze] = useState(null);
-  const [playerPosition, setPlayerPosition] = useState({ x: 0, y: 0 });
-  const [playerName, setPlayerName] = useState('');
+  const cheatMode = process.env.REACT_APP_CHEAT_MODE === 'true' ? true : (false); // Default to false if env var is missing
+  const mazeSize = process.env.REACT_APP_MAZE_SIZE || 10; // Default to 10 if env var is missing
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (!maze) return;
-      
-      let newX = playerPosition.x;
-      let newY = playerPosition.y;
-
-      switch (event.key) {
-        case "ArrowUp":
-          // Attempt to move up
-          newY = newY > 0 && !maze.cells[newY][newX].Walls[0] ? newY - 1 : newY;
-          break;
-        case "ArrowDown":
-          // Attempt to move down
-          newY = newY < maze.height - 1 && !maze.cells[newY][newX].Walls[2] ? newY + 1 : newY;
-          break;
-        case "ArrowLeft":
-          // Attempt to move left
-          newX = newX > 0 && !maze.cells[newY][newX].Walls[3] ? newX - 1 : newX;
-          break;
-        case "ArrowRight":
-          // Attempt to move right
-          newX = newX < maze.width - 1 && !maze.cells[newY][newX].Walls[1] ? newX + 1 : newX;
-          break;
-        default:
-          return; // If it's not an arrow key, we don't want to do anything
-      }
-
-      setPlayerPosition({ x: newX, y: newY });
-    };
-
-    // Bind the event listener
-    window.addEventListener('keydown', handleKeyDown);
-
-    // Unbind the event listener on cleanup
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [playerPosition, maze]); // Only re-bind the event listener if these values change
-
-  useEffect(() => {
-    const name = Cookies.get('playerName');
-    if (!name) {
-      const newName = generatePlayerName();
-      Cookies.set('playerName', newName, { expires: 7 });
-      setPlayerName(newName);
-    } else {
-      setPlayerName(name);
-    }
-    
-    // Fetch the maze once on component mount
-    fetchMaze();
-  }, []); // Empty array to ensure this effect runs only once
-
-  const fetchMaze = () => {
-    // Assuming your backend service is running and accessible
-    fetch('http://localhost:8080/maze?width=5&height=5')
-      .then(response => response.json())
-      .then(data => {
+    const fetchMaze = async () => {
+      try {
+        console.log('BACKEND_API_URL:', process.env.REACT_APP_BACKEND_API_URL);
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_API_URL}/maze?width=${mazeSize}&height=${mazeSize}`);
+        const data = await response.json();
         setMaze(data);
-        setPlayerPosition({ x: 0, y: 0 }); // Reset player position when fetching a new maze
-      })
-      .catch(error => console.error('Error fetching maze:', error));
+        setUserPosition({ x: data.cells.findIndex(row => row.some(cell => cell.IsStart)), y: 0 }); // Simplified start position logic
+      } catch (error) {
+        console.error("Failed to fetch maze:", error);
+      }
+    };
+
+    fetchMaze();
+  }, [gameId, mazeSize]);
+
+  const handleMove = (e) => {
+    if (status !== "playing" || !maze) return;
+    e.preventDefault();
+    let { x, y } = userPosition;
+
+    // Adjust movement logic based on the fetched maze structure
+    switch (e.key) {
+      case "ArrowUp": if (y > 0 && !maze.cells[y][x].Walls[0]) y--; break;
+      case "ArrowDown": if (y < maze.height - 1 && !maze.cells[y][x].Walls[2]) y++; break;
+      case "ArrowLeft": if (x > 0 && !maze.cells[y][x].Walls[3]) x--; break;
+      case "ArrowRight": if (x < maze.width - 1 && !maze.cells[y][x].Walls[1]) x++; break;
+      default: return;
+    }
+
+    setUserPosition({ x, y });
   };
 
-  const generatePlayerName = () => {
-    const colors = ['Red', 'Green', 'Blue', 'Yellow', 'Purple'];
-    const fruits = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry'];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const fruit = fruits[Math.floor(Math.random() * fruits.length)];
-    return `${color} ${fruit}`;
+  // Use solve function if needed for cheat mode or other features
+  // const solutionSet = cheatMode ? new Set(solve(maze, userPosition.x, userPosition.y).map(([x, y]) => `${x}-${y}`)) : new Set();
+
+  const makeClassName = (i, j) => {
+    let className = '';
+    const cell = maze.cells[i][j];
+    className += cell.Walls[0] ? ' topWall' : '';
+    className += cell.Walls[1] ? ' rightWall' : '';
+    className += cell.Walls[2] ? ' bottomWall' : '';
+    className += cell.Walls[3] ? ' leftWall' : '';
+    if (cell.IsStart) className += ' start';
+    if (cell.IsFinish) className += ' finish';
+    if (userPosition.x === j && userPosition.y === i) className += ' currentPosition';
+    // if (cheatMode && solutionSet.has(`${i}-${j}`)) className += ' solutionPath';
+    return className.trim();
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Welcome to the Maze, {playerName}!</h1>
-        <div className="welcome-frame">
-          {maze && <Maze maze={maze} playerPosition={playerPosition} />}
+    <div className="App" onKeyDown={handleMove} tabIndex={0}>
+      {/* Instructions updated for arrow keys */}
+      <p>Use &#8592;, &#8593;, &#8594;, &#8595; to move. Cheat mode is {cheatMode ? "ON" : "OFF"}.</p>
+      {maze && (
+        <table id="maze">
+          <tbody>
+            {maze.cells.map((row, i) => (
+              <tr key={`row-${i}`}>
+                {row.map((cell, j) => (
+                  <td key={`cell-${i}-${j}`} className={makeClassName(i, j)}>
+                    <div />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {status === "won" && (
+        <div className="info">
+          <p>You won! Click to restart.</p>
         </div>
-      </header>
+      )}
     </div>
   );
 }
-
-export default App;

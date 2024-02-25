@@ -7,41 +7,64 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	"github.com/vfiftyfive/kube-maze/backend/pkg/maze"
+	maze "github.com/vfiftyfive/kube-maze/pkg"
 )
 
-// Maze represents the structure of our maze
-type Maze struct {
-	Width  int `json:"width"`
-	Height int `json:"height"`
-	// Add more fields as needed for your maze logic
+// MazeResponse represents the JSON structure for the maze response
+type MazeResponse struct {
+	Width  int           `json:"width"`
+	Height int           `json:"height"`
+	Cells  [][]maze.Cell `json:"cells"`
 }
 
-func generateMaze(width, height int) maze.Maze {
-	return maze.NewMaze(width, height) // Assuming you've imported the maze package correctly
+func setupCORS(router *mux.Router) {
+	router.Use(mux.CORSMethodMiddleware(router))
+	router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*") // Be permissive
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			next.ServeHTTP(w, r)
+		})
+	})
+}
+
+func generateMazeHandler(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	width, err := strconv.Atoi(query.Get("width"))
+	if err != nil || width <= 0 {
+		http.Error(w, "Invalid width parameter", http.StatusBadRequest)
+		return
+	}
+
+	height, err := strconv.Atoi(query.Get("height"))
+	if err != nil || height <= 0 {
+		http.Error(w, "Invalid height parameter", http.StatusBadRequest)
+		return
+	}
+
+	generatedMaze := maze.NewMaze(width, height) // Use the NewMaze function from the maze package
+	response := MazeResponse{
+		Width:  generatedMaze.Width,
+		Height: generatedMaze.Height,
+		Cells:  generatedMaze.Cells,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func main() {
 	router := mux.NewRouter()
+	setupCORS(router)
 	logger := logrus.New()
 
-	// Define your routes here
-	router.HandleFunc("/maze", func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
-		width, _ := strconv.Atoi(query.Get("width"))
-		height, _ := strconv.Atoi(query.Get("height"))
+	// Define the route for generating mazes
+	router.HandleFunc("/maze", generateMazeHandler).Methods("GET")
 
-		if width <= 0 || height <= 0 {
-			http.Error(w, "Invalid width or height parameter", http.StatusBadRequest)
-			return
-		}
-
-		// Placeholder for maze generation logic
-		maze := generateMaze(width, height) // Implement this function
-		json.NewEncoder(w).Encode(maze)
-	}).Methods("GET")
-
+	// Start the server
 	logger.Info("Starting server on port 8080")
-
-	http.ListenAndServe(":8080", router)
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		logger.Fatal(err)
+	}
 }

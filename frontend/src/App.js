@@ -12,7 +12,7 @@ export default function App() {
 
   useEffect(() => {
     const fetchMaze = async () => {
-      const url = `${process.env.REACT_APP_BACKEND_API_URL}/maze?width=${mazeSize}&height=${mazeSize}`; // Adjusted for a single size parameter
+      const url = `${process.env.REACT_APP_BACKEND_URL}/maze?width=${mazeSize}&height=${mazeSize}`; // Adjusted for a single size parameter
       try {
         const response = await fetch(url);
         const data = await response.json();

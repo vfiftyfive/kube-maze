@@ -3,23 +3,28 @@ FROM golang:1.21.6 as builder
 
 WORKDIR /app
 
-# Copy the Go files and go.mod, go.sum if they exist
-COPY cmd/main.go .
-COPY go.mod go.sum* ./
+# Copy the go mod and sum files
+COPY go.mod go.sum ./
 
-# Download dependencies (if any)
+# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
 RUN go mod download
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+# Copy the source from the current directory to the Working Directory inside the container
+COPY ./cmd ./cmd
+COPY ./pkg ./pkg
 
-# Final stage
-FROM alpine:latest
+# Build the Go app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
+
+# Start a new stage from scratch
+FROM alpine:3.19  
 
 WORKDIR /root/
 
-# Copy the compiled binary from the builder stage
+# Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/main .
 
-# Command to run the binary
+EXPOSE 8080
+
+# Command to run the executable
 CMD ["./main"]

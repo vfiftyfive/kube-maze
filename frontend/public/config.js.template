@@ -1,0 +1,3 @@
+window.backendUrl = '${REACT_APP_BACKEND_URL}';
+window.cheatMode = '${REACT_APP_CHEAT_MODE}';
+window.mazeSize = '${REACT_APP_MAZE_SIZE}';

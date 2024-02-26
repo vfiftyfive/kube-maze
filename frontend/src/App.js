@@ -6,13 +6,15 @@ export default function App() {
   const [userPosition, setUserPosition] = useState({ x: 0, y: 0 });
   const [maze, setMaze] = useState(null);
   const [gameStatus, setGameStatus] = useState("playing");
-  const cheatMode = process.env.REACT_APP_CHEAT_MODE === "true";
-  const mazeSize = process.env.REACT_APP_MAZE_SIZE || 10;
   const [solutionPath, setSolutionPath] = useState([]);
-
+  
   useEffect(() => {
+    const backendUrl = window.backendUrl || "http://localhost:8080";
+    const cheatMode = window.cheatMode === 'true';
+    const mazeSize = window.mazeSize || 10;
+
     const fetchMaze = async () => {
-      const url = `${process.env.REACT_APP_BACKEND_URL}/maze?width=${mazeSize}&height=${mazeSize}`; // Adjusted for a single size parameter
+      const url = `${backendUrl}/maze?width=${mazeSize}&height=${mazeSize}`;
       try {
         const response = await fetch(url);
         const data = await response.json();
@@ -41,7 +43,7 @@ export default function App() {
     };
 
     fetchMaze();
-  }, [mazeSize, cheatMode]);
+  }, []);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -82,7 +84,7 @@ export default function App() {
     let className = cell ? `${cell.Walls.map((wall, index) => wall ? `${["topWall", "rightWall", "bottomWall", "leftWall"][index]}` : '').join(' ')}` : '';
   
     // Apply solutionPath only if it's not the current position or destination
-    if (solutionPath.some(pos => pos.x === j && pos.y === i) && cheatMode && !(i === userPosition.y && j === userPosition.x)) {
+    if (solutionPath.some(pos => pos.x === j && pos.y === i) && window.cheatMode && !(i === userPosition.y && j === userPosition.x)) {
       className += ' solutionPath';
     }
   
@@ -98,11 +100,10 @@ export default function App() {
   
     return className.trim();
   };
-  
 
   return (
     <div className="App" tabIndex="0" onKeyDown={handleKeyDown}>
-      <p>Use &#8592;, &#8593;, &#8594;, &#8595; to move. Cheat mode is {cheatMode ? "ON" : "OFF"}.</p>
+      <p>Use &#8592;, &#8593;, &#8594;, &#8595; to move. If you see breadcrumbs, cheat mode is ON!.</p>
       {maze && (
         <table id="maze">
           <tbody>

@@ -1,0 +1,27 @@
+# permissions for end users to view mazes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: maze-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kubebuilder
+    app.kubernetes.io/part-of: kubebuilder
+    app.kubernetes.io/managed-by: kustomize
+  name: maze-viewer-role
+rules:
+- apiGroups:
+  - maze.staticvoid.io
+  resources:
+  - mazes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - maze.staticvoid.io
+  resources:
+  - mazes/status
+  verbs:
+  - get

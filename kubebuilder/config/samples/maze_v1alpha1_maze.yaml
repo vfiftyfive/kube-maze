@@ -1,0 +1,12 @@
+apiVersion: maze.staticvoid.io/v1alpha1
+kind: Maze
+metadata:
+  labels:
+    app.kubernetes.io/name: maze
+    app.kubernetes.io/instance: maze-sample
+    app.kubernetes.io/part-of: kubebuilder
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubebuilder
+  name: maze-sample
+spec:
+  # TODO(user): Add fields here
